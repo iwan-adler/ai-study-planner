@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Study Planner</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <h1>AI Study Planner</h1>
+      <nav aria-label="Sections">
+        <button class="tab" data-tab="dashboard" aria-current="page">Dashboard</button>
+        <button class="tab" data-tab="schedule">Schedule</button>
+        <button class="tab" data-tab="tasks">Tasks</button>
+        <button class="tab" data-tab="setup">Setup</button>
+        <button class="tab" data-tab="assistant">Assistant</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p id="flash" class="flash" role="status" aria-live="polite" hidden></p>
+
+    <!-- Dashboard -->
+    <section id="tab-dashboard" class="panel">
+      <div id="stats" class="stats"></div>
+      <div id="warnings"></div>
+      <div class="grid">
+        <article class="card">
+          <h2>Today</h2>
+          <ul id="today" class="list"></ul>
+        </article>
+        <article class="card">
+          <h2>Upcoming deadlines <span class="muted small">(7 days)</span></h2>
+          <ul id="upcoming" class="list"></ul>
+          <h3 id="overdue-title" hidden>Overdue</h3>
+          <ul id="overdue" class="list"></ul>
+        </article>
+        <article class="card" id="review-card" hidden>
+          <h2>Did these happen?</h2>
+          <p class="muted small">Past sessions you haven't marked. Unmarked time is not counted as studied.</p>
+          <ul id="review" class="list"></ul>
+        </article>
+        <article class="card">
+          <h2>Subjects</h2>
+          <ul id="subjects-attention" class="list"></ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- Schedule -->
+    <section id="tab-schedule" class="panel" hidden>
+      <div class="row-between">
+        <h2>Next 7 days</h2>
+        <button id="replan-btn" class="primary">Replan now</button>
+      </div>
+      <div id="week"></div>
+      <details class="card">
+        <summary>Why this order?</summary>
+        <ul id="reasons" class="list small"></ul>
+      </details>
+    </section>
+
+    <!-- Tasks -->
+    <section id="tab-tasks" class="panel" hidden>
+      <article class="card">
+        <h2 id="task-form-title">Add a task</h2>
+        <form id="task-form" class="form-grid">
+          <input type="hidden" name="id">
+          <label>Subject <select name="subject_id" required></select></label>
+          <label class="span-2">Title <input name="title" required maxlength="120" placeholder="e.g. Revise binary trees"></label>
+          <label>Estimated minutes <input name="estimated_minutes" type="number" min="15" max="6000" step="5" required value="60"></label>
+          <label>Deadline <input name="deadline" type="datetime-local" required></label>
+          <label>Priority
+            <select name="priority"><option value="1">Low</option><option value="2" selected>Medium</option><option value="3">High</option></select>
+          </label>
+          <label>Difficulty
+            <select name="difficulty"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
+          </label>
+          <label class="span-3">Notes <textarea name="notes" maxlength="1000" rows="2"></textarea></label>
+          <div class="span-3 actions">
+            <button type="submit" class="primary">Save task</button>
+            <button type="button" id="task-cancel" hidden>Cancel edit</button>
+          </div>
+        </form>
+      </article>
+      <div id="breakdown" class="card" hidden></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Task</th><th>Deadline</th><th>Progress</th><th>Priority</th><th><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody id="task-rows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Setup -->
+    <section id="tab-setup" class="panel" hidden>
+      <div class="grid">
+        <article class="card">
+          <h2>Profile &amp; preferences</h2>
+          <form id="profile-form" class="stack">
+            <label>Name <input name="name" maxlength="100" required></label>
+            <label>Goals <textarea name="goals" rows="2" maxlength="2000"></textarea></label>
+            <label>Max session (min) <input name="max_session_minutes" type="number" min="15" max="180" required></label>
+            <label>Break between sessions (min) <input name="break_minutes" type="number" min="0" max="60" required></label>
+            <label>Max study per day (min) <input name="max_daily_minutes" type="number" min="30" max="960" required></label>
+            <button class="primary">Save preferences</button>
+          </form>
+        </article>
+        <article class="card">
+          <h2>Subjects</h2>
+          <form id="subject-form" class="inline">
+            <input name="name" placeholder="New subject" maxlength="80" required aria-label="New subject name">
+            <button>Add</button>
+          </form>
+          <ul id="subject-list" class="list"></ul>
+        </article>
+        <article class="card span-all">
+          <h2>Weekly availability</h2>
+          <p class="muted small">Sessions are only placed inside these windows. Each day can have different windows.</p>
+          <div id="windows"></div>
+          <div class="actions">
+            <button id="add-window">+ Add window</button>
+            <button id="save-windows" class="primary">Save availability</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Assistant -->
+    <section id="tab-assistant" class="panel" hidden>
+      <article class="card">
+        <h2>Assistant</h2>
+        <p id="ai-status" class="muted"></p>
+        <button id="explain-btn" class="primary">Explain my plan</button>
+        <div id="explanation"></div>
+      </article>
+    </section>
+  </main>
+
+  <template id="session-tpl">
+    <li class="session">
+      <div class="session-main">
+        <span class="time"></span>
+        <span class="title"></span>
+        <span class="muted small subject"></span>
+      </div>
+      <div class="session-side">
+        <span class="chip status"></span>
+        <span class="checkin">
+          <button data-status="completed">Done</button>
+          <button data-status="partial">Partial</button>
+          <button data-status="missed">Missed</button>
+        </span>
+      </div>
+    </li>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

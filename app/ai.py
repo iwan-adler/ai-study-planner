@@ -60,6 +60,9 @@ class OpenAICompatibleProvider:
                 json={
                     "model": self._model,
                     "temperature": 0.2,
+                    # JSON mode: OpenAI, Groq and Ollama then guarantee syntactically valid JSON.
+                    # The schema is still validated below; JSON mode doesn't enforce it.
+                    "response_format": {"type": "json_object"},
                     "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
                 },
             )
@@ -225,6 +228,10 @@ def breakdown(provider: AIProvider | None, task: dict, free_minutes: int) -> dic
 
 
 def _short(exc: Exception) -> str:
+    if isinstance(exc, ValidationError):
+        first = exc.errors()[0]
+        location = ".".join(str(part) for part in first["loc"]) or "reply"
+        return f"{location}: {first['msg']}"[:200]
     text = str(exc).splitlines()[0] if str(exc) else type(exc).__name__
     return text[:200]
 

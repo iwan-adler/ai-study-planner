@@ -89,6 +89,14 @@ def test_malformed_ai_explanation_falls_back(make_client, reply):
     assert result["warnings"][0].startswith("AI answer rejected")
 
 
+def test_rejection_warning_names_the_bad_field(make_client):
+    # Real llama3.2 behaviour seen in testing: valid JSON, but the required summary is missing.
+    client, _ = ai_setup(make_client, FakeProvider(reply=json.dumps({"revision_tips": ["a", "b"]})))
+    result = client.post("/api/ai/explain").json()
+    assert result["source"] == "rule-based"
+    assert "summary: Field required" in result["warnings"][0]
+
+
 def test_provider_failure_falls_back(make_client):
     client, _ = ai_setup(make_client, FakeProvider(error=AIError("timeout")))
     result = client.post("/api/ai/explain").json()
@@ -157,6 +165,7 @@ def test_openai_compatible_provider_request_and_errors():
     assert seen["url"] == "http://llm.test/v1/chat/completions"
     assert seen["auth"] == "Bearer sk-secret"
     assert seen["body"]["model"] == "m1" and seen["body"]["messages"][1]["content"] == "user"
+    assert seen["body"]["response_format"] == {"type": "json_object"}
 
     failing = OpenAICompatibleProvider(
         settings, httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(401))))
