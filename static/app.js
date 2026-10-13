@@ -71,7 +71,7 @@ const fmtMinutes = (m) => (m >= 60 ? `${Math.floor(m / 60)} h ${m % 60 ? `${m % 
 
 function fillList(list, items, render, emptyText) {
   list.replaceChildren();
-  if (!items.length) list.append(el("li", emptyText, "empty"));
+  if (!items.length && emptyText) list.append(el("li", emptyText, "empty"));
   items.forEach((item) => list.append(render(item)));
 }
 
@@ -451,8 +451,11 @@ $("#add-window").addEventListener("click", () => $("#windows").append(windowRow(
 $("#save-windows").addEventListener("click", saveWindows);
 $("#explain-btn").addEventListener("click", explain);
 
-let initial = "dashboard";
-try { initial = localStorage.getItem("tab") || initial; } catch { /* ignore */ }
+// A link like /#schedule opens that tab; otherwise reopen the last tab used.
+let initial = location.hash.slice(1) || "dashboard";
+if (!location.hash) {
+  try { initial = localStorage.getItem("tab") || initial; } catch { /* ignore */ }
+}
 showTab(document.getElementById(`tab-${initial}`) ? initial : "dashboard");
 resetTaskForm();
 refresh();

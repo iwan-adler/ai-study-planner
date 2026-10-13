@@ -10,7 +10,9 @@ Algorithm (greedy Earliest-Deadline-First):
    whose deadline is soonest (ties: higher priority, then higher difficulty)
    that still needs time and can finish a session before its deadline.
 3. Place one session no longer than the max session length, the free interval,
-   the daily limit or the deadline allow; then insert a break.
+   the daily limit or the deadline allow; then insert a break. Sessions are
+   adjusted so no task is left with a remainder under 15 minutes (a session may
+   run up to 14 minutes over the cap to finish a task).
 4. Whatever does not fit before a deadline is reported as unscheduled instead
    of being squeezed into an impossible timetable.
 
@@ -193,14 +195,18 @@ def plan(
                 need = remaining[task.id]
                 if need <= 0 or task.deadline <= cursor:
                     continue
-                length = min(
-                    preferences.max_session_minutes,
-                    need,
-                    _minutes(end - cursor),
-                    cap_left,
-                    _minutes(task.deadline - cursor),
-                )
-                # Skip fragments too short to be useful, unless they finish the task.
+                room = min(_minutes(end - cursor), cap_left, _minutes(task.deadline - cursor))
+                length = min(preferences.max_session_minutes, need, room)
+                leftover = need - length
+                if 0 < leftover < MIN_SESSION_MINUTES:
+                    # Don't strand a pointless 5-minute remainder for a later day:
+                    if need <= min(room, preferences.max_session_minutes + MIN_SESSION_MINUTES - 1):
+                        length = need  # finish the task now with a slightly longer session
+                    elif length - (MIN_SESSION_MINUTES - leftover) >= MIN_SESSION_MINUTES:
+                        length -= MIN_SESSION_MINUTES - leftover  # leave a proper session for later
+                    else:
+                        continue  # this fragment doesn't suit this task; try the next one
+                # Skip fragments too short to be useful, unless they are the task's last bit.
                 if length >= MIN_SESSION_MINUTES or (length == need and length > 0):
                     chosen = (task, length)
                     break

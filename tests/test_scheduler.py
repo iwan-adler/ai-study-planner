@@ -172,6 +172,19 @@ def test_short_gaps_are_not_used_for_tiny_sessions():
     assert [s.minutes for s in result.sessions] == [10]
 
 
+def test_no_tiny_remainders_are_left_for_later():
+    # Found via a screenshot: 75 min task with a 20-min fragment left a 5-min session on another day.
+    windows = [Window(0, time(18, 0), time(19, 10)), Window(1, time(18, 0), time(21, 0))]
+    result = plan([task(1, 75, 6)], windows, PREFS, MONDAY)
+    assert all(s.minutes >= MIN_SESSION_MINUTES for s in result.sessions)
+    assert minutes_for(result, 1) == 75
+
+
+def test_session_extends_slightly_to_finish_a_task():
+    result = plan([task(1, 55, 6)], EVENINGS, PREFS, MONDAY)
+    assert [s.minutes for s in result.sessions] == [55]  # not 50 + 5
+
+
 def test_completed_tasks_are_ignored():
     result = plan([task(1, 0, 3)], EVENINGS, PREFS, MONDAY)
     assert result.sessions == [] and result.unscheduled == [] and result.reasons == {}
@@ -229,7 +242,9 @@ def test_random_plans_never_break_hard_constraints(seed):
     for s in sessions:
         assert s.start >= now
         assert s.end <= by_id[s.task_id].deadline
-        assert 0 < s.minutes <= prefs.max_session_minutes
+        assert 0 < s.minutes <= prefs.max_session_minutes + MIN_SESSION_MINUTES - 1
+        # Short sessions only when the task itself needed less than a minimum session.
+        assert s.minutes >= MIN_SESSION_MINUTES or by_id[s.task_id].remaining_minutes < MIN_SESSION_MINUTES
         assert any(w.weekday == s.start.weekday() and w.start <= s.start.time()
                    and s.end.time() <= w.end and s.start.date() == s.end.date() for w in windows)
         assert all(s.end <= b.start or s.start >= b.end for b in busy)

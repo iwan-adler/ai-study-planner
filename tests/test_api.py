@@ -258,13 +258,13 @@ def test_dashboard(client, setup, clock):
     soon = add_task(client, setup, title="Soon", deadline="2026-10-13T23:00", estimated_minutes=60)
     add_task(client, setup, title="Later", deadline="2026-10-30T23:00", estimated_minutes=60)
     first = sessions(client, soon["id"])[0]
-    client.patch(f"/api/sessions/{first['id']}", json={"status": "completed"})
+    client.patch(f"/api/sessions/{first['id']}", json={"status": "partial", "actual_minutes": 30})
 
-    clock.now = datetime(2026, 10, 14, 9, 0)  # "Soon" is now overdue unless finished
+    clock.now = datetime(2026, 10, 14, 9, 0)  # "Soon" is overdue: only 30 of 60 min done
     data = client.get("/api/dashboard").json()
     assert [t["title"] for t in data["overdue"]] == ["Soon"]
     assert data["tasks_total"] == 2
-    assert data["week"]["studied_minutes"] == 50 and data["week"]["completed_sessions"] == 1
+    assert data["week"]["studied_minutes"] == 30 and data["week"]["partial_sessions"] == 1
     assert data["subjects"][0]["needs_attention"]
 
 
