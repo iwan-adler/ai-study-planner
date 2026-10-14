@@ -1,0 +1,14 @@
+# docker compose up --build   ->   http://127.0.0.1:8000
+services:
+  app:
+    build: .
+    ports:
+      # Published on localhost only: the app has no login, so it shouldn't be
+      # reachable from the rest of your network unless you choose to change this.
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - app-data:/data   # the SQLite database survives container rebuilds
+    restart: unless-stopped
+
+volumes:
+  app-data:

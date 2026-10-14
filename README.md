@@ -201,6 +201,29 @@ curl -X POST http://127.0.0.1:8000/api/tasks -H "Content-Type: application/json"
 
 Invalid input returns `422` with field-level messages. Conflicts return `409`, and missing records `404`.
 
+## Run with Docker
+
+```bash
+docker compose up --build        # then open http://127.0.0.1:8000
+```
+
+How the image is set up:
+- **Base:** `python:3.14-slim`, with runtime dependencies only (pytest stays out of the image).
+- **Non-root user,** with the SQLite database on a named volume (`/data`), so data survives rebuilds and restarts.
+- **Built-in `HEALTHCHECK`.**
+- **Published on `127.0.0.1` only,** because the app has no login. Change the port mapping in `compose.yaml` only if you understand that exposes it to your network.
+
+To load the sample data into the container's volume, run `docker compose run --rm app python -m app.seed`.
+
+**How this is verified:** the CI `docker` job checks every push on a real Docker engine. It:
+1. builds the image;
+2. waits for the container to report **healthy**;
+3. checks it runs as a **non-root** user;
+4. creates data through the API;
+5. restarts the container and confirms the **data is still there**.
+
+Docker isn't installed on the development machine, so CI is where the image is tested.
+
 ## Tests
 
 ```bash
