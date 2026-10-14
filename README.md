@@ -1,5 +1,7 @@
 # AI Study Planner
 
+[![tests](https://github.com/iwan-adler/ai-study-planner/actions/workflows/tests.yml/badge.svg)](https://github.com/iwan-adler/ai-study-planner/actions/workflows/tests.yml)
+
 A study planner that turns your tasks, deadlines and weekly availability into a realistic day-by-day schedule. When sessions are completed, partially completed or missed, it replans the rest of your week, and it tells you honestly when something can't fit before its deadline.
 
 The core scheduler is **deterministic and rule-based**. AI is an **optional** extra that explains the plan and suggests task breakdowns. Its output is validated against your real data, and it is never saved without your action. The app works fully without any AI configured.
